@@ -144,10 +144,17 @@ async def streamers_page(request: Request, guild_id: str):
             .order_by(Streamer.platform, Streamer.streamer_name)
         )
         streamers = list(result.scalars().all())
+  
     return templates.TemplateResponse(
-        "guilds/streamers.html",
-        base_context(request, guild=guild, streamers=streamers, active_page="streamers"),
-    )
+    request=request,
+    name="guilds/streamers.html",
+    context=base_context(
+        request,
+        guild=guild,
+        streamers=streamers,
+        active_page="streamers",
+    ),
+)
 
 
 @router.post("/dashboard/{guild_id}/streamers")
@@ -236,17 +243,17 @@ async def notification_settings_page(request: Request, guild_id: str):
         await db.commit()
         channels, roles = await discord_choices(request, guild.guild_id)
     return templates.TemplateResponse(
-        "guilds/settings.html",
-        base_context(
-            request,
-            guild=guild,
-            settings=settings,
-            channels=channels,
-            roles=roles,
-            active_page="settings",
-        ),
-    )
-
+    request=request,
+    name="guilds/settings.html",
+    context=base_context(
+        request,
+        guild=guild,
+        settings=settings,
+        channels=channels,
+        roles=roles,
+        active_page="settings",
+    ),
+)
 
 @router.post("/dashboard/{guild_id}/settings")
 async def save_notification_settings(request: Request, guild_id: str):
@@ -277,9 +284,15 @@ async def embed_page(request: Request, guild_id: str):
         template = await get_or_create_embed_template(db, guild.id)
         await db.commit()
     return templates.TemplateResponse(
-        "guilds/embed.html",
-        base_context(request, guild=guild, template=template, active_page="embed"),
-    )
+    request=request,
+    name="guilds/embed.html",
+    context=base_context(
+        request,
+        guild=guild,
+        template=template,
+        active_page="embed",
+    ),
+)
 
 
 @router.post("/dashboard/{guild_id}/embed")
@@ -329,12 +342,13 @@ async def logs_page(request: Request, guild_id: str, event_type: str | None = No
         result = await db.execute(query.order_by(desc(NotificationLog.timestamp)).limit(100))
         logs = list(result.scalars().all())
     return templates.TemplateResponse(
-        "guilds/logs.html",
-        base_context(
-            request,
-            guild=guild,
-            logs=logs,
-            event_type=event_type,
-            active_page="logs",
-        ),
-    )
+    request=request,
+    name="guilds/logs.html",
+    context=base_context(
+        request,
+        guild=guild,
+        logs=logs,
+        event_type=event_type,
+        active_page="logs",
+    ),
+)
