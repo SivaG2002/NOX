@@ -86,11 +86,12 @@ async def dashboard(request: Request):
         ids = {str(guild["id"]) for guild in request.session.get("guilds", [])}
         result = await db.execute(select(Guild).where(Guild.guild_id.in_(ids)).order_by(Guild.name))
         guilds = list(result.scalars().all())
+    
     return templates.TemplateResponse(
-        "dashboard.html",
-        base_context(request, guilds=guilds),
-    )
-
+    request=request,
+    name="dashboard.html",
+    context=base_context(request, guilds=guilds),
+)
 
 @router.get("/dashboard/{guild_id}")
 async def guild_overview(request: Request, guild_id: str):
