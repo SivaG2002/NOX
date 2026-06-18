@@ -116,16 +116,17 @@ async def guild_overview(request: Request, guild_id: str):
             .limit(8)
         )
     return templates.TemplateResponse(
-        "guilds/overview.html",
-        base_context(
-            request,
-            guild=guild,
-            total_streamers=total_streamers or 0,
-            active_notifications=active_notifications or 0,
-            recent_logs=list(recent_logs.scalars().all()),
-            active_page="overview",
-        ),
-    )
+    request=request,
+    name="guilds/overview.html",
+    context=base_context(
+        request,
+        guild=guild,
+        total_streamers=total_streamers or 0,
+        active_notifications=active_notifications or 0,
+        recent_logs=list(recent_logs.scalars().all()),
+        active_page="overview",
+    ),
+)
 
 
 @router.get("/dashboard/{guild_id}/streamers")
