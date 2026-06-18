@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ guild.name }} - Logs{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <h2 class="h6 mb-0">Logs</h2>
+    <form class="d-flex gap-2" method="get">
+      <select class="form-select form-select-sm" name="event_type">
+        <option value="">All events</option>
+        {% for type in ["notification_sent", "stream_started", "stream_ended", "error"] %}
+          <option value="{{ type }}" {% if event_type == type %}selected{% endif %}>{{ type }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-sm btn-outline-secondary">Filter</button>
+    </form>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Event</th>
+          <th>Platform</th>
+          <th>Message</th>
+          <th>Notification ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+          <tr>
+            <td class="text-muted small">{{ log.timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+            <td><span class="badge text-bg-light">{{ log.event_type }}</span></td>
+            <td>{{ log.platform|title }}</td>
+            <td>{{ log.message or "" }}</td>
+            <td class="text-muted small">{{ log.notification_message_id or "" }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="text-muted py-4 text-center">No logs yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

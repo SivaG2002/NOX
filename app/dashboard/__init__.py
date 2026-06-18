@@ -1,0 +1,2 @@
+"""Jinja dashboard routes."""
+

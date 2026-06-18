@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ guild.name }} - Dashboard{% endblock %}
+{% block content %}
+<div class="metric-grid mb-4">
+  <div class="metric">
+    <div class="metric-label">Configured streamers</div>
+    <div class="metric-value">{{ total_streamers }}</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Active notifications</div>
+    <div class="metric-value">{{ active_notifications }}</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Recent activity</div>
+    <div class="metric-value">{{ recent_logs|length }}</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    <h2 class="h6 mb-0">Recent Activity</h2>
+    <a class="btn btn-sm btn-outline-secondary" href="/dashboard/{{ guild.guild_id }}/logs">View all</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Platform</th>
+          <th>Message</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in recent_logs %}
+          <tr>
+            <td><span class="badge text-bg-light">{{ log.event_type }}</span></td>
+            <td>{{ log.platform|title }}</td>
+            <td>{{ log.message or "" }}</td>
+            <td class="text-muted small">{{ log.timestamp.strftime("%Y-%m-%d %H:%M") }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="text-muted py-4 text-center">No activity yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

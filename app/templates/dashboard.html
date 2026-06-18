@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Stream Notifier{% endblock %}
+{% block content %}
+<div class="page-header mb-3">
+  <h1 class="h4 mb-1">Servers</h1>
+  <div class="text-muted small">Manage servers where your Discord account has Manage Server permission.</div>
+</div>
+
+{% if guilds %}
+  <div class="server-grid">
+    {% for guild in guilds %}
+      <a class="server-tile" href="/dashboard/{{ guild.guild_id }}">
+        <span class="server-avatar">{{ guild.name[:1] }}</span>
+        <span>
+          <span class="server-name">{{ guild.name }}</span>
+          <span class="server-id">{{ guild.guild_id }}</span>
+        </span>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <h2 class="h6">No manageable servers found</h2>
+    <p class="mb-0 text-muted">Log in with a Discord account that can manage at least one server.</p>
+  </div>
+{% endif %}
+{% endblock %}
+

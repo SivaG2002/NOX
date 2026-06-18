@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: streamnotifier
+      POSTGRES_USER: streamnotifier
+      POSTGRES_PASSWORD: streamnotifier
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U streamnotifier -d streamnotifier"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://streamnotifier:streamnotifier@db:5432/streamnotifier
+      AUTO_CREATE_TABLES: "false"
+      BASE_URL: http://localhost:8000
+      DISCORD_REDIRECT_URI: http://localhost:8000/auth/callback
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  postgres_data:
+

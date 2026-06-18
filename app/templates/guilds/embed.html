@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ guild.name }} - Embed Builder{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="panel">
+      <div class="panel-header">
+        <h2 class="h6 mb-0">Embed Builder</h2>
+      </div>
+      <form id="embed-form" method="post" action="/dashboard/{{ guild.guild_id }}/embed">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="mb-3">
+          <label class="form-label">Embed Title</label>
+          <input class="form-control" name="title" data-preview="title" maxlength="256" value="{{ template.title }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Embed Description</label>
+          <textarea class="form-control" rows="7" name="description" data-preview="description">{{ template.description }}</textarea>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Embed Color</label>
+            <input class="form-control form-control-color w-100" type="color" name="color" data-preview="color" value="{{ template.color }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Footer Text</label>
+            <input class="form-control" name="footer_text" data-preview="footer" maxlength="256" value="{{ template.footer_text or '' }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Author Text</label>
+            <input class="form-control" name="author_text" data-preview="author" maxlength="256" value="{{ template.author_text or '' }}">
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-4 mt-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="show_thumbnail" id="show_thumbnail" {% if template.show_thumbnail %}checked{% endif %}>
+            <label class="form-check-label" for="show_thumbnail">Thumbnail Enabled</label>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="show_preview" id="show_preview" {% if template.show_preview %}checked{% endif %}>
+            <label class="form-check-label" for="show_preview">Preview Image Enabled</label>
+          </div>
+        </div>
+        <div class="variable-row mt-3">
+          <code>{streamer}</code><code>{title}</code><code>{game}</code><code>{platform}</code><code>{url}</code><code>{viewers}</code><code>{start_time}</code>
+        </div>
+        <div class="mt-4">
+          <button class="btn btn-primary" type="submit">Save Embed</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="panel sticky-preview">
+      <div class="panel-header">
+        <h2 class="h6 mb-0">Preview</h2>
+      </div>
+      <div class="discord-preview" id="embed-preview">
+        <div class="preview-accent" id="preview-accent"></div>
+        <div class="preview-body">
+          <div class="preview-author" id="preview-author">Twitch Live</div>
+          <div class="preview-title" id="preview-title"></div>
+          <div class="preview-description" id="preview-description"></div>
+          <div class="preview-fields">
+            <span><strong>Platform</strong>Twitch</span>
+            <span><strong>Viewers</strong>1,024</span>
+            <span><strong>Started At</strong>Just now</span>
+          </div>
+          <div class="preview-footer" id="preview-footer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/embed_preview.js"></script>
+{% endblock %}
+

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ guild.name }} - Streamers{% endblock %}
+{% block content %}
+<div class="panel mb-4">
+  <div class="panel-header">
+    <h2 class="h6 mb-0">Add Streamer</h2>
+  </div>
+  <form class="row g-3 align-items-end" method="post" action="/dashboard/{{ guild.guild_id }}/streamers">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="col-md-3">
+      <label class="form-label">Platform</label>
+      <select class="form-select" name="platform" required>
+        <option value="twitch">Twitch</option>
+        <option value="youtube">YouTube</option>
+        <option value="kick">Kick</option>
+      </select>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label">Channel Name</label>
+      <input class="form-control" name="streamer_name" maxlength="120" required>
+    </div>
+    <div class="col-md-2">
+      <div class="form-check form-switch mb-2">
+        <input class="form-check-input" type="checkbox" name="enabled" id="enabled-new" checked>
+        <label class="form-check-label" for="enabled-new">Enabled</label>
+      </div>
+    </div>
+    <div class="col-md-2 d-grid">
+      <button class="btn btn-primary" type="submit">Add</button>
+    </div>
+  </form>
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    <h2 class="h6 mb-0">Configured Streamers</h2>
+  </div>
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Platform</th>
+          <th>Channel Name</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for streamer in streamers %}
+        <tr>
+          <td>
+            <form id="edit-{{ streamer.id }}" method="post" action="/dashboard/{{ guild.guild_id }}/streamers/{{ streamer.id }}/edit">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            </form>
+            <select class="form-select form-select-sm" name="platform" form="edit-{{ streamer.id }}">
+              <option value="twitch" {% if streamer.platform == "twitch" %}selected{% endif %}>Twitch</option>
+              <option value="youtube" {% if streamer.platform == "youtube" %}selected{% endif %}>YouTube</option>
+              <option value="kick" {% if streamer.platform == "kick" %}selected{% endif %}>Kick</option>
+            </select>
+          </td>
+          <td><input class="form-control form-control-sm" name="streamer_name" value="{{ streamer.streamer_name }}" form="edit-{{ streamer.id }}"></td>
+          <td>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="enabled" form="edit-{{ streamer.id }}" {% if streamer.enabled %}checked{% endif %}>
+            </div>
+          </td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-primary" form="edit-{{ streamer.id }}">Save</button>
+            <form class="d-inline" method="post" action="/dashboard/{{ guild.guild_id }}/streamers/{{ streamer.id }}/delete">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="text-muted py-4 text-center">No streamers configured.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

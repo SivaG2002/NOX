@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ guild.name }} - Notifications{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <h2 class="h6 mb-0">Notification Settings</h2>
+  </div>
+  <form method="post" action="/dashboard/{{ guild.guild_id }}/settings" class="settings-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Discord Channel</label>
+        <select class="form-select" name="channel_id">
+          <option value="">Select channel</option>
+          {% for channel in channels %}
+            <option value="{{ channel.id }}" {% if settings.channel_id == channel.id %}selected{% endif %}>#{{ channel.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Role</label>
+        <select class="form-select" name="role_id">
+          <option value="">Select role</option>
+          {% for role in roles %}
+            <option value="{{ role.id }}" {% if settings.role_id == role.id %}selected{% endif %}>{{ role.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="form-label">Mention</label>
+      <div class="mention-grid">
+        <label class="mention-option">
+          <input type="radio" name="mention_mode" value="role" {% if settings.role_id %}checked{% endif %}>
+          <span>Role</span>
+        </label>
+        <label class="mention-option">
+          <input type="radio" name="mention_mode" value="everyone" {% if settings.mention_everyone %}checked{% endif %}>
+          <span>@everyone</span>
+        </label>
+        <label class="mention-option">
+          <input type="radio" name="mention_mode" value="here" {% if settings.mention_here %}checked{% endif %}>
+          <span>@here</span>
+        </label>
+        <label class="mention-option">
+          <input type="radio" name="mention_mode" value="none" {% if not settings.role_id and not settings.mention_everyone and not settings.mention_here %}checked{% endif %}>
+          <span>No mention</span>
+        </label>
+      </div>
+    </div>
+
+    {% if not channels %}
+      <div class="alert alert-warning mt-3 mb-0">No Discord channels are available from the bot cache.</div>
+    {% endif %}
+
+    <div class="mt-4">
+      <button class="btn btn-primary" type="submit">Save Settings</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
