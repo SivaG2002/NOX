@@ -1,0 +1,15 @@
+aiohttp
+aiosqlite
+alembic
+asyncpg
+discord.py
+email-validator
+fastapi
+httpx
+itsdangerous
+jinja2
+pydantic
+pydantic-settings
+python-multipart
+sqlalchemy[asyncio]
+uvicorn[standard]
