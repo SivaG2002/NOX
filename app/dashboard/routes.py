@@ -115,6 +115,8 @@ async def guild_overview(request: Request, guild_id: str):
             .order_by(desc(NotificationLog.timestamp))
             .limit(8)
         )
+
+    
     return templates.TemplateResponse(
     request=request,
     name="guilds/overview.html",
