@@ -40,6 +40,28 @@ async def list_channels(
     return await bot.list_text_channels(guild.guild_id)
 
 
+@router.get("/{guild_id}/voice-channels", response_model=list[DiscordChannelOut])
+async def list_voice_channels(
+    request: Request,
+    guild: Guild = Depends(require_guild_access),
+) -> list[dict[str, str]]:
+    bot: StreamNotificationBot | None = getattr(request.app.state, "discord_bot", None)
+    if not bot or not bot.is_ready():
+        return []
+    return await bot.list_voice_channels(guild.guild_id)
+
+
+@router.get("/{guild_id}/categories", response_model=list[DiscordChannelOut])
+async def list_categories(
+    request: Request,
+    guild: Guild = Depends(require_guild_access),
+) -> list[dict[str, str]]:
+    bot: StreamNotificationBot | None = getattr(request.app.state, "discord_bot", None)
+    if not bot or not bot.is_ready():
+        return []
+    return await bot.list_categories(guild.guild_id)
+
+
 @router.get("/{guild_id}/roles", response_model=list[DiscordRoleOut])
 async def list_roles(
     request: Request,
@@ -60,4 +82,3 @@ async def create_defaults(
     await db.commit()
     await db.refresh(guild)
     return guild
-

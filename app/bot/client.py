@@ -10,9 +10,20 @@ class StreamNotificationBot(commands.Bot):
     def __init__(self) -> None:
         intents = discord.Intents.default()
         intents.guilds = True
+        intents.voice_states = True
         super().__init__(command_prefix="!", intents=intents)
 
     async def setup_hook(self) -> None:
+        from app.bot.temporary_voice import TemporaryVoiceChannelCog
+
+        await self.add_cog(TemporaryVoiceChannelCog(self))
+        try:
+            synced_commands = await self.tree.sync()
+            logger.info(
+                "discord_slash_commands_synced", extra={"count": len(synced_commands)}
+            )
+        except discord.HTTPException:
+            logger.exception("discord_slash_command_sync_failed")
         logger.info("discord_bot_setup")
 
     async def on_ready(self) -> None:
@@ -55,10 +66,26 @@ class StreamNotificationBot(commands.Bot):
             return []
         return [{"id": str(channel.id), "name": channel.name} for channel in guild.text_channels]
 
+    async def list_voice_channels(self, guild_id: str) -> list[dict[str, str]]:
+        guild = self.get_guild(int(guild_id))
+        if guild is None:
+            return []
+        return [
+            {"id": str(channel.id), "name": channel.name} for channel in guild.voice_channels
+        ]
+
+    async def list_categories(self, guild_id: str) -> list[dict[str, str]]:
+        guild = self.get_guild(int(guild_id))
+        if guild is None:
+            return []
+        return [{"id": str(category.id), "name": category.name} for category in guild.categories]
+
     async def list_roles(self, guild_id: str) -> list[dict[str, str]]:
         guild = self.get_guild(int(guild_id))
         if guild is None:
             return []
         roles = [role for role in guild.roles if not role.is_default()]
-        return [{"id": str(role.id), "name": role.name} for role in sorted(roles, key=lambda r: r.position)]
-
+        return [
+            {"id": str(role.id), "name": role.name}
+            for role in sorted(roles, key=lambda r: r.position)
+        ]

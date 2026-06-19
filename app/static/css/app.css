@@ -94,6 +94,23 @@ body {
   font-weight: 700;
 }
 
+.owner-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: .9rem;
+}
+
+.owner-list span {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.voice-multi-select {
+  min-height: 164px;
+}
+
 .panel {
   padding: 16px;
 }
@@ -199,4 +216,3 @@ body {
     grid-template-columns: 1fr;
   }
 }
-

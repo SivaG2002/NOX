@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.bot.client import StreamNotificationBot
 from app.core.security import get_or_create_csrf_token
 from app.database.session import AsyncSessionLocal
-from app.models import Guild, NotificationLog, StreamState, Streamer
+from app.models import Guild, NotificationLog, Streamer, StreamState
 from app.schemas.embed_template import EmbedTemplateUpdate
 from app.schemas.streamer import StreamerCreate, normalize_streamer_name
 from app.services.guild_defaults import (
@@ -17,6 +17,15 @@ from app.services.guild_defaults import (
     get_guild_by_discord_id,
     get_or_create_embed_template,
     get_or_create_notification_settings,
+    get_or_create_voice_channel_settings,
+)
+from app.services.temporary_voice_channels import (
+    DEFAULT_NAMING_TEMPLATE,
+    VOICE_SIZE_PRESETS,
+    clamp_user_limit,
+    configured_create_channel_ids,
+    get_voice_channel_metrics,
+    list_active_temporary_channels,
 )
 
 router = APIRouter()
@@ -70,6 +79,13 @@ async def discord_choices(request: Request, guild_id: str) -> tuple[list[dict], 
     return await bot.list_text_channels(guild_id), await bot.list_roles(guild_id)
 
 
+async def discord_voice_choices(request: Request, guild_id: str) -> tuple[list[dict], list[dict]]:
+    bot: StreamNotificationBot | None = getattr(request.app.state, "discord_bot", None)
+    if not bot or not bot.is_ready():
+        return [], []
+    return await bot.list_voice_channels(guild_id), await bot.list_categories(guild_id)
+
+
 @router.get("/")
 async def root(request: Request):
     if request.session.get("user"):
@@ -84,7 +100,9 @@ async def dashboard(request: Request):
         return user
     async with AsyncSessionLocal() as db:
         ids = {str(guild["id"]) for guild in request.session.get("guilds", [])}
-        result = await db.execute(select(Guild).where(Guild.guild_id.in_(ids)).order_by(Guild.name))
+        result = await db.execute(
+            select(Guild).where(Guild.guild_id.in_(ids)).order_by(Guild.name)
+        )
         guilds = list(result.scalars().all())
     
     return templates.TemplateResponse(
@@ -271,7 +289,84 @@ async def save_notification_settings(request: Request, guild_id: str):
         settings.mention_here = mention_mode == "here"
         await db.commit()
         flash(request, "Notification settings saved.", "success")
-    return RedirectResponse(f"/dashboard/{guild_id}/settings", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(
+        f"/dashboard/{guild_id}/settings", status_code=status.HTTP_303_SEE_OTHER
+    )
+
+
+@router.get("/dashboard/{guild_id}/voice")
+async def voice_channels_page(request: Request, guild_id: str):
+    user = require_user(request)
+    if isinstance(user, RedirectResponse):
+        return user
+    async with AsyncSessionLocal() as db:
+        guild = await load_guild(request, db, guild_id)
+        settings = await get_or_create_voice_channel_settings(db, guild.id)
+        active_channels = await list_active_temporary_channels(db, guild.id)
+        metrics = await get_voice_channel_metrics(db, guild.id)
+        await db.commit()
+        voice_channels, categories = await discord_voice_choices(request, guild.guild_id)
+
+    channel_names = {channel["id"]: channel["name"] for channel in voice_channels}
+    selected_create_channel_ids = configured_create_channel_ids(settings)
+    selected_size_preset = next(
+        (
+            key
+            for key, preset in VOICE_SIZE_PRESETS.items()
+            if key != "custom" and preset[1] == settings.default_user_limit
+        ),
+        "custom",
+    )
+    return templates.TemplateResponse(
+        request=request,
+        name="guilds/voice.html",
+        context=base_context(
+            request,
+            guild=guild,
+            settings=settings,
+            active_channels=active_channels,
+            metrics=metrics,
+            voice_channels=voice_channels,
+            categories=categories,
+            channel_names=channel_names,
+            selected_create_channel_ids=selected_create_channel_ids,
+            selected_size_preset=selected_size_preset,
+            size_presets=VOICE_SIZE_PRESETS,
+            active_page="voice",
+        ),
+    )
+
+
+@router.post("/dashboard/{guild_id}/voice")
+async def save_voice_channels(request: Request, guild_id: str):
+    user = require_user(request)
+    if isinstance(user, RedirectResponse):
+        return user
+    form = await request.form()
+    async with AsyncSessionLocal() as db:
+        guild = await load_guild(request, db, guild_id)
+        settings = await get_or_create_voice_channel_settings(db, guild.id)
+        create_channel_ids = [
+            str(channel_id) for channel_id in form.getlist("create_channel_ids") if str(channel_id)
+        ]
+        preset = str(form.get("default_size_preset") or "custom")
+        if preset in VOICE_SIZE_PRESETS and preset != "custom":
+            default_user_limit = VOICE_SIZE_PRESETS[preset][1]
+        else:
+            default_user_limit = clamp_user_limit(form.get("custom_user_limit"))
+
+        settings.enabled = form.get("enabled") == "on"
+        settings.create_channel_id = create_channel_ids[0] if create_channel_ids else None
+        settings.create_channel_ids = create_channel_ids
+        settings.category_id = str(form.get("category_id") or "") or None
+        settings.default_user_limit = default_user_limit
+        settings.naming_template = (
+            str(form.get("naming_template") or "").strip()[:100] or DEFAULT_NAMING_TEMPLATE
+        )
+        settings.auto_delete = form.get("auto_delete") == "on"
+        await db.commit()
+        flash(request, "Voice channel settings saved.", "success")
+    return RedirectResponse(f"/dashboard/{guild_id}/voice", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/dashboard/{guild_id}/embed")

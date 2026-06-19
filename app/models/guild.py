@@ -25,4 +25,12 @@ class Guild(Base, TimestampMixin):
         uselist=False,
     )
     logs = relationship("NotificationLog", back_populates="guild", cascade="all, delete-orphan")
-
+    voice_channel_settings = relationship(
+        "VoiceChannelSettings",
+        back_populates="guild",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    temporary_voice_channels = relationship(
+        "TemporaryVoiceChannel", back_populates="guild", cascade="all, delete-orphan"
+    )

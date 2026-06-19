@@ -26,6 +26,7 @@ from app.models.notification_log import NotificationLog  # noqa: E402
 from app.models.notification_settings import NotificationSettings  # noqa: E402
 from app.models.stream_state import StreamState  # noqa: E402
 from app.models.streamer import Streamer  # noqa: E402
+from app.models.voice_channel import TemporaryVoiceChannel, VoiceChannelSettings  # noqa: E402
 
 __all__ = [
     "Base",
@@ -36,5 +37,6 @@ __all__ = [
     "StreamState",
     "Streamer",
     "TimestampMixin",
+    "TemporaryVoiceChannel",
+    "VoiceChannelSettings",
 ]
-

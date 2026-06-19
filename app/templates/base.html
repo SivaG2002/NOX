@@ -32,6 +32,7 @@
           <li class="nav-item"><a class="nav-link {% if active_page == 'overview' %}active{% endif %}" href="/dashboard/{{ guild.guild_id }}">Dashboard</a></li>
           <li class="nav-item"><a class="nav-link {% if active_page == 'streamers' %}active{% endif %}" href="/dashboard/{{ guild.guild_id }}/streamers">Streamers</a></li>
           <li class="nav-item"><a class="nav-link {% if active_page == 'settings' %}active{% endif %}" href="/dashboard/{{ guild.guild_id }}/settings">Notifications</a></li>
+          <li class="nav-item"><a class="nav-link {% if active_page == 'voice' %}active{% endif %}" href="/dashboard/{{ guild.guild_id }}/voice">Voice Channels</a></li>
           <li class="nav-item"><a class="nav-link {% if active_page == 'embed' %}active{% endif %}" href="/dashboard/{{ guild.guild_id }}/embed">Embed</a></li>
           <li class="nav-item"><a class="nav-link {% if active_page == 'logs' %}active{% endif %}" href="/dashboard/{{ guild.guild_id }}/logs">Logs</a></li>
         </ul>
@@ -49,4 +50,3 @@
   {% block scripts %}{% endblock %}
 </body>
 </html>
-
