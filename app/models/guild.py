@@ -31,6 +31,11 @@ class Guild(Base, TimestampMixin):
         cascade="all, delete-orphan",
         uselist=False,
     )
+    voice_channel_triggers = relationship(
+        "VoiceChannelTrigger",
+        back_populates="guild",
+        cascade="all, delete-orphan",
+    )
     temporary_voice_channels = relationship(
         "TemporaryVoiceChannel", back_populates="guild", cascade="all, delete-orphan"
     )

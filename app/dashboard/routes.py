@@ -24,8 +24,13 @@ from app.services.temporary_voice_channels import (
     VOICE_SIZE_PRESETS,
     clamp_user_limit,
     configured_create_channel_ids,
+    create_voice_channel_trigger,
+    delete_voice_channel_trigger,
     get_voice_channel_metrics,
+    get_voice_channel_trigger,
     list_active_temporary_channels,
+    list_voice_channel_triggers,
+    update_voice_channel_trigger,
 )
 
 router = APIRouter()
@@ -304,6 +309,7 @@ async def voice_channels_page(request: Request, guild_id: str):
         settings = await get_or_create_voice_channel_settings(db, guild.id)
         active_channels = await list_active_temporary_channels(db, guild.id)
         metrics = await get_voice_channel_metrics(db, guild.id)
+        triggers = await list_voice_channel_triggers(db, guild.id)
         await db.commit()
         voice_channels, categories = await discord_voice_choices(request, guild.guild_id)
 
@@ -332,6 +338,7 @@ async def voice_channels_page(request: Request, guild_id: str):
             selected_create_channel_ids=selected_create_channel_ids,
             selected_size_preset=selected_size_preset,
             size_presets=VOICE_SIZE_PRESETS,
+            triggers=triggers,
             active_page="voice",
         ),
     )
@@ -366,6 +373,112 @@ async def save_voice_channels(request: Request, guild_id: str):
         settings.auto_delete = form.get("auto_delete") == "on"
         await db.commit()
         flash(request, "Voice channel settings saved.", "success")
+    return RedirectResponse(f"/dashboard/{guild_id}/voice", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/dashboard/{guild_id}/voice-triggers/create")
+async def create_trigger(request: Request, guild_id: str):
+    user = require_user(request)
+    if isinstance(user, RedirectResponse):
+        return user
+    form = await request.form()
+    async with AsyncSessionLocal() as db:
+        guild = await load_guild(request, db, guild_id)
+        try:
+            trigger_channel_id = str(form.get("trigger_channel_id") or "")
+            if not trigger_channel_id:
+                flash(request, "Trigger channel is required.", "danger")
+            else:
+                preset = str(form.get("size_preset") or "custom")
+                if preset in VOICE_SIZE_PRESETS and preset != "custom":
+                    user_limit = VOICE_SIZE_PRESETS[preset][1]
+                else:
+                    user_limit = clamp_user_limit(form.get("custom_user_limit"))
+                
+                trigger_channel_name = str(form.get("trigger_channel_name") or f"Channel {trigger_channel_id}")
+                category_id = str(form.get("category_id") or "") or None
+                naming_template = str(form.get("naming_template") or "").strip()[:100] or DEFAULT_NAMING_TEMPLATE
+                enabled = form.get("enabled") == "on"
+                
+                await create_voice_channel_trigger(
+                    db,
+                    guild_pk=guild.id,
+                    trigger_channel_id=trigger_channel_id,
+                    trigger_channel_name=trigger_channel_name,
+                    category_id=category_id,
+                    user_limit=user_limit,
+                    size_preset=preset,
+                    naming_template=naming_template,
+                    enabled=enabled,
+                )
+                await db.commit()
+                flash(request, "Trigger channel created successfully.", "success")
+        except Exception as exc:
+            await db.rollback()
+            flash(request, f"Error creating trigger: {exc}", "danger")
+    return RedirectResponse(f"/dashboard/{guild_id}/voice", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/dashboard/{guild_id}/voice-triggers/{trigger_id}/update")
+async def update_trigger(request: Request, guild_id: str, trigger_id: int):
+    user = require_user(request)
+    if isinstance(user, RedirectResponse):
+        return user
+    form = await request.form()
+    async with AsyncSessionLocal() as db:
+        guild = await load_guild(request, db, guild_id)
+        try:
+            trigger = await get_voice_channel_trigger(db, guild.id, trigger_id)
+            if not trigger:
+                flash(request, "Trigger not found.", "danger")
+            else:
+                preset = str(form.get("size_preset") or "custom")
+                if preset in VOICE_SIZE_PRESETS and preset != "custom":
+                    user_limit = VOICE_SIZE_PRESETS[preset][1]
+                else:
+                    user_limit = clamp_user_limit(form.get("custom_user_limit"))
+                
+                trigger_channel_name = str(form.get("trigger_channel_name") or trigger.trigger_channel_name)
+                category_id = str(form.get("category_id") or "") or None
+                naming_template = str(form.get("naming_template") or "").strip()[:100] or trigger.naming_template
+                enabled = form.get("enabled") == "on"
+                
+                await update_voice_channel_trigger(
+                    db,
+                    guild.id,
+                    trigger_id,
+                    trigger_channel_name=trigger_channel_name,
+                    category_id=category_id,
+                    user_limit=user_limit,
+                    size_preset=preset,
+                    naming_template=naming_template,
+                    enabled=enabled,
+                )
+                await db.commit()
+                flash(request, "Trigger updated successfully.", "success")
+        except Exception as exc:
+            await db.rollback()
+            flash(request, f"Error updating trigger: {exc}", "danger")
+    return RedirectResponse(f"/dashboard/{guild_id}/voice", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/dashboard/{guild_id}/voice-triggers/{trigger_id}/delete")
+async def delete_trigger(request: Request, guild_id: str, trigger_id: int):
+    user = require_user(request)
+    if isinstance(user, RedirectResponse):
+        return user
+    async with AsyncSessionLocal() as db:
+        guild = await load_guild(request, db, guild_id)
+        try:
+            deleted = await delete_voice_channel_trigger(db, guild.id, trigger_id)
+            await db.commit()
+            if deleted:
+                flash(request, "Trigger deleted successfully.", "success")
+            else:
+                flash(request, "Trigger not found.", "danger")
+        except Exception as exc:
+            await db.rollback()
+            flash(request, f"Error deleting trigger: {exc}", "danger")
     return RedirectResponse(f"/dashboard/{guild_id}/voice", status_code=status.HTTP_303_SEE_OTHER)
 
 

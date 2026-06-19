@@ -11,7 +11,12 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import AsyncSessionLocal
-from app.models import NotificationLog, TemporaryVoiceChannel, VoiceChannelSettings
+from app.models import (
+    NotificationLog,
+    TemporaryVoiceChannel,
+    VoiceChannelSettings,
+    VoiceChannelTrigger,
+)
 from app.services.guild_defaults import (
     get_guild_by_discord_id,
     get_or_create_voice_channel_settings,
@@ -164,6 +169,120 @@ async def log_voice_event(
     )
 
 
+# VoiceChannelTrigger CRUD Operations
+
+
+async def get_voice_channel_trigger(
+    db: AsyncSession, guild_pk: int, trigger_id: int
+) -> VoiceChannelTrigger | None:
+    """Get a specific voice channel trigger by ID."""
+    result = await db.execute(
+        select(VoiceChannelTrigger).where(
+            VoiceChannelTrigger.guild_id == guild_pk,
+            VoiceChannelTrigger.id == trigger_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_voice_channel_trigger_by_channel(
+    db: AsyncSession, guild_pk: int, channel_id: str
+) -> VoiceChannelTrigger | None:
+    """Get a voice channel trigger by trigger channel ID."""
+    result = await db.execute(
+        select(VoiceChannelTrigger).where(
+            VoiceChannelTrigger.guild_id == guild_pk,
+            VoiceChannelTrigger.trigger_channel_id == str(channel_id),
+            VoiceChannelTrigger.enabled.is_(True),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def list_voice_channel_triggers(
+    db: AsyncSession, guild_pk: int, enabled_only: bool = False
+) -> list[VoiceChannelTrigger]:
+    """List all voice channel triggers for a guild."""
+    query = select(VoiceChannelTrigger).where(VoiceChannelTrigger.guild_id == guild_pk)
+    if enabled_only:
+        query = query.where(VoiceChannelTrigger.enabled.is_(True))
+    query = query.order_by(VoiceChannelTrigger.trigger_channel_name)
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
+async def create_voice_channel_trigger(
+    db: AsyncSession,
+    *,
+    guild_pk: int,
+    trigger_channel_id: str,
+    trigger_channel_name: str,
+    category_id: str | None = None,
+    user_limit: int = 4,
+    size_preset: str = "custom",
+    naming_template: str = DEFAULT_NAMING_TEMPLATE,
+    enabled: bool = True,
+) -> VoiceChannelTrigger:
+    """Create a new voice channel trigger."""
+    trigger = VoiceChannelTrigger(
+        guild_id=guild_pk,
+        trigger_channel_id=str(trigger_channel_id),
+        trigger_channel_name=trigger_channel_name,
+        category_id=category_id,
+        user_limit=clamp_user_limit(user_limit),
+        size_preset=size_preset,
+        naming_template=naming_template or DEFAULT_NAMING_TEMPLATE,
+        enabled=enabled,
+    )
+    db.add(trigger)
+    return trigger
+
+
+async def update_voice_channel_trigger(
+    db: AsyncSession,
+    guild_pk: int,
+    trigger_id: int,
+    *,
+    trigger_channel_name: str | None = None,
+    category_id: str | None = None,
+    user_limit: int | None = None,
+    size_preset: str | None = None,
+    naming_template: str | None = None,
+    enabled: bool | None = None,
+) -> VoiceChannelTrigger | None:
+    """Update an existing voice channel trigger."""
+    trigger = await get_voice_channel_trigger(db, guild_pk, trigger_id)
+    if not trigger:
+        return None
+    
+    if trigger_channel_name is not None:
+        trigger.trigger_channel_name = trigger_channel_name
+    if category_id is not None:
+        trigger.category_id = category_id
+    if user_limit is not None:
+        trigger.user_limit = clamp_user_limit(user_limit)
+    if size_preset is not None:
+        trigger.size_preset = size_preset
+    if naming_template is not None:
+        trigger.naming_template = naming_template or DEFAULT_NAMING_TEMPLATE
+    if enabled is not None:
+        trigger.enabled = enabled
+    
+    return trigger
+
+
+async def delete_voice_channel_trigger(
+    db: AsyncSession, guild_pk: int, trigger_id: int
+) -> bool:
+    """Delete a voice channel trigger."""
+    trigger = await get_voice_channel_trigger(db, guild_pk, trigger_id)
+    if not trigger:
+        return False
+    
+    await db.delete(trigger)
+    return True
+
+
 class TemporaryVoiceChannelService:
     def __init__(self) -> None:
         self._deleting_channel_ids: set[str] = set()
@@ -224,16 +343,16 @@ class TemporaryVoiceChannelService:
         guild_record = await get_guild_by_discord_id(db, str(member.guild.id))
         if guild_record is None:
             return None
-        settings = await get_or_create_voice_channel_settings(db, guild_record.id)
-        if not settings.enabled:
-            return None
-        if str(source_channel.id) not in configured_create_channel_ids(settings):
+        
+        # Check for a matching voice channel trigger
+        trigger = await get_voice_channel_trigger_by_channel(db, guild_record.id, source_channel.id)
+        if not trigger:
             return None
 
-        user_limit = clamp_user_limit(settings.default_user_limit)
-        channel_name = render_channel_name(settings.naming_template, member)
+        user_limit = trigger.user_limit
+        channel_name = render_channel_name(trigger.naming_template, member)
         category = (
-            self._resolve_category(member.guild, settings.category_id) or source_channel.category
+            self._resolve_category(member.guild, trigger.category_id) or source_channel.category
         )
         overwrites = self._creation_overwrites(member)
         channel = await member.guild.create_voice_channel(
@@ -272,6 +391,7 @@ class TemporaryVoiceChannelService:
                 "owner_name": record.owner_name,
                 "user_limit": user_limit,
                 "source_channel_id": str(source_channel.id),
+                "trigger_id": trigger.id,
             },
         )
         logger.info(
