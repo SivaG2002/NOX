@@ -5,8 +5,10 @@ from pydantic import ValidationError
 from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.datastructures import UploadFile
 
 from app.bot.client import StreamNotificationBot
+from app.core.config import get_settings
 from app.core.security import get_or_create_csrf_token
 from app.database.session import AsyncSessionLocal
 from app.models import Guild, NotificationLog, Streamer, StreamState
@@ -32,9 +34,14 @@ from app.services.temporary_voice_channels import (
     list_voice_channel_triggers,
     update_voice_channel_trigger,
 )
+from app.services.uploads import (
+    delete_uploaded_thumbnail,
+    save_custom_thumbnail,
+)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+app_settings = get_settings()
 
 
 def require_user(request: Request) -> dict | RedirectResponse:
@@ -292,6 +299,7 @@ async def save_notification_settings(request: Request, guild_id: str):
         settings.role_id = str(form.get("role_id") or "") if mention_mode == "role" else None
         settings.mention_everyone = mention_mode == "everyone"
         settings.mention_here = mention_mode == "here"
+        settings.delete_notification_on_end = form.get("delete_notification_on_end") == "on"
         await db.commit()
         flash(request, "Notification settings saved.", "success")
     return RedirectResponse(
@@ -509,6 +517,9 @@ async def save_embed(request: Request, guild_id: str):
     if isinstance(user, RedirectResponse):
         return user
     form = await request.form()
+    new_thumbnail_url: str | None = None
+    old_thumbnail_url: str | None = None
+    remove_old_thumbnail = False
     async with AsyncSessionLocal() as db:
         guild = await load_guild(request, db, guild_id)
         try:
@@ -529,10 +540,35 @@ async def save_embed(request: Request, guild_id: str):
             template.author_text = payload.author_text
             template.show_thumbnail = payload.show_thumbnail
             template.show_preview = payload.show_preview
+
+            upload = form.get("custom_thumbnail")
+            has_upload = isinstance(upload, UploadFile) and bool(upload.filename)
+            if has_upload:
+                old_thumbnail_url = template.custom_thumbnail_url
+                new_thumbnail_url = await save_custom_thumbnail(
+                    upload,
+                    guild_id=guild.guild_id,
+                    uploads_dir=app_settings.uploads_dir,
+                )
+                template.custom_thumbnail_url = new_thumbnail_url
+            elif form.get("remove_custom_thumbnail") == "on" and template.custom_thumbnail_url:
+                old_thumbnail_url = template.custom_thumbnail_url
+                template.custom_thumbnail_url = None
+                remove_old_thumbnail = True
+
             await db.commit()
-            flash(request, "Embed template saved.", "success")
+            if old_thumbnail_url and (new_thumbnail_url or remove_old_thumbnail):
+                delete_uploaded_thumbnail(old_thumbnail_url, uploads_dir=app_settings.uploads_dir)
+            if new_thumbnail_url:
+                flash(request, "Embed template saved and custom thumbnail uploaded.", "success")
+            elif remove_old_thumbnail:
+                flash(request, "Embed template saved and custom thumbnail removed.", "success")
+            else:
+                flash(request, "Embed template saved.", "success")
         except (ValidationError, ValueError) as exc:
             await db.rollback()
+            if new_thumbnail_url:
+                delete_uploaded_thumbnail(new_thumbnail_url, uploads_dir=app_settings.uploads_dir)
             flash(request, f"Could not save embed template: {exc}", "danger")
     return RedirectResponse(f"/dashboard/{guild_id}/embed", status_code=status.HTTP_303_SEE_OTHER)
 

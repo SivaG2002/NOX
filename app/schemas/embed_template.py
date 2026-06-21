@@ -36,6 +36,7 @@ class EmbedTemplateOut(BaseModel):
     author_text: str | None
     show_thumbnail: bool
     show_preview: bool
+    custom_thumbnail_url: str | None
     created_at: datetime
     updated_at: datetime
 

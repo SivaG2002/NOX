@@ -7,7 +7,7 @@
     <form class="d-flex gap-2" method="get">
       <select class="form-select form-select-sm" name="event_type">
         <option value="">All events</option>
-        {% for type in ["notification_sent", "stream_started", "stream_ended", "voice_channel_created", "voice_channel_deleted", "voice_owner_changed", "voice_channel_locked", "voice_channel_unlocked", "voice_limit_changed", "error"] %}
+        {% for type in ["notification_sent", "notification_deleted", "notification_delete_failed", "notification_delete_skipped", "notification_marked_ended", "notification_update_failed", "notification_update_skipped", "notification_cleanup_skipped", "stream_started", "stream_ended", "voice_channel_created", "voice_channel_deleted", "voice_owner_changed", "voice_channel_locked", "voice_channel_unlocked", "voice_limit_changed", "error"] %}
           <option value="{{ type }}" {% if event_type == type %}selected{% endif %}>{{ type }}</option>
         {% endfor %}
       </select>

@@ -1,4 +1,6 @@
 import logging
+from datetime import UTC, datetime
+from pathlib import Path
 
 import discord
 from discord.ext import commands
@@ -39,6 +41,8 @@ class StreamNotificationBot(commands.Bot):
         watch_url: str,
         allow_everyone: bool,
         allow_roles: bool,
+        embed_file_path: Path | None = None,
+        embed_file_name: str | None = None,
     ) -> discord.Message:
         channel = self.get_channel(int(channel_id))
         if channel is None:
@@ -53,12 +57,86 @@ class StreamNotificationBot(commands.Bot):
             roles=allow_roles,
             users=False,
         )
-        return await channel.send(
-            content=content or None,
-            embed=embed,
-            view=view,
-            allowed_mentions=allowed_mentions,
+        embed_file = (
+            discord.File(str(embed_file_path), filename=embed_file_name or embed_file_path.name)
+            if embed_file_path
+            else None
         )
+        try:
+            return await channel.send(
+                content=content or None,
+                embed=embed,
+                view=view,
+                allowed_mentions=allowed_mentions,
+                file=embed_file,
+            )
+        finally:
+            if embed_file:
+                embed_file.close()
+
+    async def fetch_notification_message(
+        self,
+        *,
+        channel_id: str,
+        message_id: str,
+    ) -> discord.Message | None:
+        try:
+            channel = self.get_channel(int(channel_id))
+            if channel is None:
+                channel = await self.fetch_channel(int(channel_id))
+            if not hasattr(channel, "fetch_message"):
+                raise ValueError(f"Channel {channel_id} does not support message fetching")
+            return await channel.fetch_message(int(message_id))
+        except discord.NotFound:
+            return None
+
+    async def delete_notification_message(
+        self,
+        *,
+        channel_id: str,
+        message_id: str,
+    ) -> bool:
+        message = await self.fetch_notification_message(
+            channel_id=channel_id,
+            message_id=message_id,
+        )
+        if message is None:
+            return False
+        try:
+            await message.delete()
+        except discord.NotFound:
+            return False
+        return True
+
+    async def mark_notification_stream_ended(
+        self,
+        *,
+        channel_id: str,
+        message_id: str,
+    ) -> bool:
+        message = await self.fetch_notification_message(
+            channel_id=channel_id,
+            message_id=message_id,
+        )
+        if message is None:
+            return False
+
+        embed = message.embeds[0].copy() if message.embeds else discord.Embed()
+        embed.colour = discord.Colour.dark_grey()
+        embed.timestamp = datetime.now(UTC)
+        if embed.title:
+            ended_title = f"{embed.title} - Stream Ended"
+            embed.title = ended_title[:256]
+        else:
+            embed.title = "Stream Ended"
+        if len(embed.fields) < 25:
+            embed.add_field(name="Status", value="Stream Ended", inline=True)
+
+        try:
+            await message.edit(embed=embed, view=None)
+        except discord.NotFound:
+            return False
+        return True
 
     async def list_text_channels(self, guild_id: str) -> list[dict[str, str]]:
         guild = self.get_guild(int(guild_id))

@@ -18,9 +18,10 @@ class StreamState(Base, TimestampMixin):
     is_live: Mapped[bool] = mapped_column(default=False, nullable=False)
     stream_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     notification_message_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    last_notification_message_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    last_notification_channel_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     streamer = relationship("Streamer", back_populates="state")
-

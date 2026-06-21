@@ -38,7 +38,7 @@ async def update_settings(
     settings.role_id = payload.role_id or None
     settings.mention_everyone = payload.mention_everyone
     settings.mention_here = False if payload.mention_everyone else payload.mention_here
+    settings.delete_notification_on_end = payload.delete_notification_on_end
     await db.commit()
     await db.refresh(settings)
     return settings
-

@@ -20,5 +20,6 @@ class EmbedTemplate(Base, TimestampMixin):
     author_text: Mapped[str | None] = mapped_column(String(256), nullable=True)
     show_thumbnail: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     show_preview: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    custom_thumbnail_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     guild = relationship("Guild", back_populates="embed_template")

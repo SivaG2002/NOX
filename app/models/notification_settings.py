@@ -15,6 +15,8 @@ class NotificationSettings(Base, TimestampMixin):
     role_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     mention_everyone: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     mention_here: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    delete_notification_on_end: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
 
     guild = relationship("Guild", back_populates="notification_settings")
-

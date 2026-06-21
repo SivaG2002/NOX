@@ -8,6 +8,7 @@ class NotificationSettingsUpdate(BaseModel):
     role_id: str | None = None
     mention_everyone: bool = False
     mention_here: bool = False
+    delete_notification_on_end: bool = True
 
 
 class NotificationSettingsOut(BaseModel):
@@ -17,8 +18,8 @@ class NotificationSettingsOut(BaseModel):
     role_id: str | None
     mention_everyone: bool
     mention_here: bool
+    delete_notification_on_end: bool
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
-

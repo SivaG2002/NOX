@@ -50,6 +50,11 @@
       </div>
     </div>
 
+    <div class="form-check form-switch mt-4">
+      <input class="form-check-input" type="checkbox" name="delete_notification_on_end" id="delete_notification_on_end" {% if settings.delete_notification_on_end %}checked{% endif %}>
+      <label class="form-check-label" for="delete_notification_on_end">Delete notification when stream ends</label>
+    </div>
+
     {% if not channels %}
       <div class="alert alert-warning mt-3 mb-0">No Discord channels are available from the bot cache.</div>
     {% endif %}
@@ -60,4 +65,3 @@
   </form>
 </div>
 {% endblock %}
-

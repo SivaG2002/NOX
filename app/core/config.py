@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     check_interval_seconds: int = 60
     rate_limit_per_minute: int = 120
     session_cookie_name: str = "streamnotifier_session"
+    uploads_dir: str = "uploads"
 
     discord_client_id: str = ""
     discord_client_secret: SecretStr = Field(default=SecretStr(""))
@@ -43,4 +44,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

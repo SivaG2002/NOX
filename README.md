@@ -33,7 +33,7 @@ Copy-Item .env.example .env
 - Add a bot token to `DISCORD_BOT_TOKEN`.
 - Add OAuth2 redirect URL `http://localhost:8000/auth/callback`.
 - Set `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, and `DISCORD_REDIRECT_URI`.
-- Invite the bot with `bot` scope and permissions to send messages, embed links, and use external emojis/buttons.
+- Invite the bot with `bot` scope and permissions to send messages, embed links, attach files, and use external emojis/buttons.
 
 4. Add platform API credentials:
 
@@ -105,4 +105,3 @@ Development defaults to SQLite with automatic table creation. Production should 
 - Discord OAuth only shows guilds where the logged-in user owns the server or has Manage Server permission.
 - The dashboard channel and role selectors require the bot to be installed in the server and connected.
 - Secrets are read from environment variables; do not commit `.env`.
-

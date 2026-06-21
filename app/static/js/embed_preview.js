@@ -33,5 +33,22 @@ document.querySelectorAll("#embed-form input, #embed-form textarea").forEach((in
   input.addEventListener("input", refreshPreview);
 });
 
-refreshPreview();
+const customThumbnailInput = document.querySelector("[data-preview='custom-thumbnail']");
+const customThumbnailPreview = document.getElementById("custom-thumbnail-preview");
+const customThumbnailEmpty = document.getElementById("custom-thumbnail-empty");
 
+customThumbnailInput?.addEventListener("change", () => {
+  const [file] = customThumbnailInput.files || [];
+  if (!file || !file.type.startsWith("image/")) {
+    return;
+  }
+  const previewUrl = URL.createObjectURL(file);
+  customThumbnailPreview.src = previewUrl;
+  customThumbnailPreview.classList.remove("d-none");
+  customThumbnailEmpty.classList.add("d-none");
+  customThumbnailPreview.addEventListener("load", () => URL.revokeObjectURL(previewUrl), {
+    once: true,
+  });
+});
+
+refreshPreview();
